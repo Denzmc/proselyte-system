@@ -43,21 +43,24 @@ services:
     ports:
       - "9188:9187"
 
-    keycloak-postgres-exporter:
-      image: prometheuscommunity/postgres-exporter:latest
-      container_name: keycloak-postgres-exporter
-      depends_on:
-        person-postgres:
-          condition: service_healthy
-      environment:
-        DATA_SOURCE_NAME: postgresql://keycloak:keycloak@keycloak-postgres:5432/keycloak?sslmode=disable
-      ports:
-        - "9189:9187"
+  keycloak-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: keycloak-postgres-exporter
+    depends_on:
+      person-postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: postgresql://keycloak:keycloak@keycloak-postgres:5432/keycloak?sslmode=disable
+    ports:
+      - "9189:9187"
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2
     container_name: individuals-keycloak
-    command: start-dev --import-realm --metrics-enabled=true
+    command:
+      start-dev 
+      --import-realm 
+      --metrics-enabled=true
     ports:
       - "8080:8080"
       - "9000:9000"
@@ -134,55 +137,55 @@ services:
     ports:
       - "3200:3200"
 
-    alloy:
-      image: grafana/alloy:latest
-      container_name: alloy
-      user: root
-      ports:
-        - "9080:9080" # HTTP interface
-        - "4317:4317" # OTLP gRPC
-        - "4318:4318" # OTLP http
-      volumes:
-        - ./infrastructure/alloy/config.alloy:/etc/alloy/config.alloy:ro
-        - /var/lib/docker/containers:/var/lib/docker/containers:ro
-        - /var/run/docker.sock:/var/run/docker.sock
-        - /var/log:/var/log:ro
-      environment:
-        GRAFANA_LOKI_URL: http://loki:3100/loki/api/v1/push
-      command:
-        - run
-        - --server.http.listen-addr=0.0.0.0:9080
-        - --storage.path=/var/lib/alloy/data
-        - /etc/alloy/config.alloy
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    user: root
+    ports:
+      - "9080:9080" # HTTP interface
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP http
+    volumes:
+      - ./infrastructure/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/log:/var/log:ro
+    environment:
+      GRAFANA_LOKI_URL: http://loki:3100/loki/api/v1/push
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:9080
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
 
-    grafana:
-      image: grafana/grafana:10.3.1
-      container_name: grafana
-      ports:
-        - "3000:3000"
-      depends_on:
-        prometheus:
-          condition: service_healthy
-        loki:
-          condition: service_healthy
-        tempo:
-          condition: service_started
-        alloy:
-          condition: service_started
-      environment:
-        GF_AUTH_ANONYMOUS_ENABLED: true
-        GF_SECURITY_ADMIN_USER: admin
-        GF_SECURITY_ADMIN_PASSWORD: admin
-        GF_METRICS_ENABLED: "true"
-      volumes:
-        - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
-        - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
-        - nexus-data:/nexus-data
-      healthcheck:
-        test: [ "CMD", "wget", "--spider", "http://localhost:3000/api/health" ]
-        interval: 10s
-        timeout: 5s
-        retries: 10
+  grafana:
+    image: grafana/grafana:10.3.1
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_started
+      alloy:
+        condition: service_started
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_METRICS_ENABLED: "true"
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
+      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
+      - nexus-data:/nexus-data
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
   artifacts:
