@@ -1,7 +1,7 @@
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 import org.gradle.api.publish.maven.MavenPublication
 
-val  versions = mapOf(
+val versions = mapOf(
     "mapstructVersion" to "1.5.5.Final",
     "springdocOpenapiStarterWebmvcUiVersion" to "2.5.0",
     "javaxAnnotationApiVersion" to "1.3.2",
@@ -20,25 +20,25 @@ val  versions = mapOf(
 
 plugins {
     idea
-	java
-	id("org.springframework.boot") version "3.5.11"
-	id("io.spring.dependency-management") version "1.1.7"
+    java
+    id("org.springframework.boot") version "3.5.0"
+    id("io.spring.dependency-management") version "1.1.7"
     id("maven-publish")
     id("org.openapi.generator") version "7.13.0"
 }
 
 group = "net.proselyte"
 version = "1.0.0-SNAPSHOT"
-description = "Person domain service"
+description = "Persons domain service for study project"
 
 java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
-	}
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencyManagement {
@@ -96,7 +96,7 @@ dependencies {
 }
 
 tasks.withType<Test> {
-	useJUnitPlatform()
+    useJUnitPlatform()
 }
 
 /*
@@ -122,7 +122,6 @@ foundSpecifications.forEach { specFile ->
         generatorName.set("spring")
         inputSpec.set(specFile.absolutePath)
         outputDir.set(ourDir)
-
 
         configOptions.set(
             mapOf(
@@ -205,30 +204,31 @@ tasks.named("build") {
     dependsOn(generatedJars)
 }
 
-val generatedJars = foundSpecifications.map { specFiles ->
-    val name = specFiles.nameWithoutExtension
-    val generatedTaskName = buildGenerateApiTaskName(name)
+val generatedJars = foundSpecifications.map { specFile ->
+    val name = specFile.nameWithoutExtension
+    val generateTaskName = buildGenerateApiTaskName(name)
     val jarTaskName = buildJarTaskName(name)
     val outDirProvider = getAbsolutePath(name)
-    val generatedSrcDir = outDirProvider.map { File(it).resolve("src/main/java") }
+    val generateSrcDir = outDirProvider.map { File(it).resolve("src/main/java") }
 
-    val sourcesSetName = "${name}"
+    val sourcesSetName = name
 
-    val sourcesSet = sourceSets.create(sourcesSetName){
-        java.srcDir(generatedSrcDir)
+    val sourceSet = sourceSets.create(sourcesSetName) {
+        java.srcDir(generateSrcDir)
         compileClasspath += sourceSets["main"].compileClasspath
     }
 
     val compileTaskName = "compile${sourcesSetName.replaceFirstChar(Char::uppercase)}Java"
-    tasks.register<JavaCompile>(compileTaskName){
-        source = sourcesSet.java
-        classpath = sourcesSet.compileClasspath
+    tasks.register<JavaCompile>(compileTaskName) {
+        source = sourceSet.java
+        classpath = sourceSet.compileClasspath
         destinationDirectory.set(layout.buildDirectory.dir("classes/${sourcesSetName}"))
+        dependsOn(generateTaskName)
     }
 
-    tasks.register<Jar>(jarTaskName){
+    tasks.register<Jar>(jarTaskName) {
         group = "build"
-        archiveBaseName.set("$name")
+        archiveBaseName.set(name)
         destinationDirectory.set(layout.buildDirectory.dir("libs"))
 
         val classOutput = layout.buildDirectory.dir("classes/${sourcesSetName}")
