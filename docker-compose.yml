@@ -8,11 +8,11 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: person
     volumes:
-      - ./infrastructure/datbases/person:/docker-entrypoint-initdb.d:ro
+      - ./infrastructure/databases/person:/docker-entrypoint-initdb.d:ro
     ports:
       - "5434:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg-isready -U postgres -p 5432"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -p 5432" ]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -27,7 +27,7 @@ services:
     ports:
       - "5433:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg-isready -U keycloak" ]
+      test: [ "CMD-SHELL", "pg_isready -U keycloak" ]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -57,10 +57,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.2
     container_name: individuals-keycloak
-    command:
-      start-dev 
-      --import-realm 
-      --metrics-enabled=true
+    command: start-dev --import-realm --metrics-enabled=true
     ports:
       - "8080:8080"
       - "9000:9000"
@@ -186,6 +183,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  persons-api:
+    build:
+      context: ./person-service
+      dockerfile: Dockerfile
+    container_name: persons-api
+    ports:
+      - "8092:8092"
+    working_dir: /app
+    environment:
+      POSTGRES_HOST: person-postgres
+      POSTGRES_PORT: 5432
+      SPRING_PROFILES_ACTIVE: docker
+      OTLP_EXPORTER_ENDPOINT: http://tempo:4318
+    depends_on:
+      person-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-i", "http://localhost:8092/actuator/health" ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
 volumes:
   artifacts:
